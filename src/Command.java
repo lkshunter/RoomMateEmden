@@ -1,5 +1,9 @@
 import com.pengrad.telegrambot.model.Update;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -21,7 +25,7 @@ public class Command {
 
     private String useCommands(Update update) {
         String command = refineCommand(update.message().text());
-        System.out.println(command + ": from " + update.message().from().firstName() + " " + update.message().from().id());
+        System.out.println(command + ": from " + update.message().from().firstName() + " " + update.message().from().id() + " at " + LocalTime.now());
         switch (command) {
             case "start":
                 return commandStart(update);
@@ -40,18 +44,50 @@ public class Command {
 
     // Commands
     private String commandDay(Update update) {
+        String buildetURL = buildURL(update, 0);
+        Timetabel test = new Timetabel(buildURL(update, 0));
+        ArrayList<Lesson> n = test.getAllLessonsAtDay();
+
         return "";
     }
 
     private String commandToday(Update update) {
-        return "";
+        String buildetURL = buildURL(update, 0);
+        Timetabel test = new Timetabel(buildURL(update, 0));
+        ArrayList<Lesson> n = test.getAllLessonsAtDay();
+
+        LocalTime now = LocalTime.now();
+
+        String result = "";
+
+        if (!n.isEmpty()) {
+            for (Lesson l : n) {
+                result += l.toString() + "\n\n";
+            }
+        } else {
+            result = "At this day exists no Task in this room.";
+        }
+
+        return result;
     }
 
     private String commandNow(Update update, String clean) {
-        String buildetURL = buildURL(update, 1);
-        Timetabel test = new Timetabel(buildURL(update, 1));
+        String buildetURL = buildURL(update, 0);
+        Timetabel test = new Timetabel(buildURL(update, 0));
         ArrayList<Lesson> n = test.getAllLessonsAtDay();
-        return buildetURL;
+
+        LocalTime now = LocalTime.now();
+
+        String result = "\u2714 - This room is currently free.";
+
+        if (!n.isEmpty()) {
+            for (Lesson l : n) {
+                if (l.start.isBefore(now) && l.stop.isAfter(now)) {
+                    result = "\u274C - This room is currently occupied by \"" + l.name + "\" from " + l.start + " till " + l.stop;
+                }
+            }
+        }
+        return result;
     }
 
     private String commandStart(Update update) {
@@ -69,6 +105,8 @@ public class Command {
                 return "This command sends you a welcome message.";
             case "now":
                 return "This command show you if a specific room is now in use.";
+            case "today":
+                return "This command show you a table of all times when this room is used today.";
             case "null":
                 return "Please add a parameter like \"start\". You can add every command to get more information";
         }
@@ -129,13 +167,39 @@ public class Command {
         return special;
     }
 
+    public String buildURL(Update update, String day, int nextWeek) {
+        String special = urlClean;
+        Timetabel table = new Timetabel(url);
+        table.fillRoomTable();
+
+        int weekNr = (int) ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR.getFrom((TemporalAccessor) LocalDate.now());
+
+        special += "&id=" + table.getValueForRoom(refineParameter(update.message().text()));
+        special = special.replace("WEEK", "" + (int) ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR.getFrom((TemporalAccessor) LocalDate.now()));
+        //special = setDays(, special);
+        return special;
+    }
+
     private String setDays(int day, String s){
         String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"};
 
         for (int i = 0; i < days.length; i++) {
-            if(i != day-3) {
+            if(i != day-2) {
                 s = s.replace(days[i], "0");
-            } else if(i == day-3) {
+            } else if(i == day-2) {
+                s = s.replace(days[i], "1");
+            }
+        }
+        return s;
+    }
+
+    private String setDays(String day, String s){
+        String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"};
+
+        for (int i = 0; i < days.length; i++) {
+            if(day.toUpperCase().equals(days[i])) {
+                s = s.replace(days[i], "0");
+            } else {
                 s = s.replace(days[i], "1");
             }
         }

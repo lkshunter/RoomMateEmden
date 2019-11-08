@@ -39,25 +39,45 @@ public class Timetabel {
     public ArrayList<Lesson> getAllLessonsAtDay(){
         ArrayList<Lesson> lessons = new ArrayList<>();
 
+        LocalTime time = LocalTime.MIN;
         for (Element table : doc.select("table.timetablepane tr")) {
             for (Element row : table.select("tr")) {
-                LocalTime time = LocalTime.MIN;
                 String name = "";
-                for (Element th : table.select("th")) {
-                    if (th.text().length() == 5) {
+                for (Element th : row.select("th")) {
+                    if (th.text().contains(":")) {
                         String[] numbers = th.text().split(":");
-                        time.plusHours(Integer.parseInt(numbers[0])).plusMinutes(Integer.parseInt(numbers[1]));
-                    }
-                }
-                for (Element td : table.select("td")) {
-                    if (td.hasText()) {
-                        name = td.html().replace("<br>", "\n").replace("<b>","").replace("</b>","");
-                        lessons.add(new Lesson(time, Integer.parseInt(td.val("rowspan").toString()),td.text()));
+                        LocalTime timeTemp = LocalTime.MIN;
+                        timeTemp = timeTemp.plusHours(Integer.parseInt(numbers[0])).plusMinutes(Integer.parseInt(numbers[1]));
+                        if (timeTemp.isAfter(time)) {
+                            time = timeTemp;
+
+                            for (Element td : row.select("td[rowspan]")) {
+                                Integer i = Integer.parseInt(td.attr("rowspan"));
+                                if (i > 1) {
+                                    Lesson unit = new Lesson(time, Integer.parseInt(td.attr("rowspan")), td.text());
+
+                                    if (!isTimeInArray(lessons, time)) {
+                                        lessons.add(unit);
+                                    }
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
         }
         return lessons;
+    }
+
+    public boolean isTimeInArray(ArrayList<Lesson> l, LocalTime t){
+        boolean check = false;
+
+        for (Lesson  les: l) {
+            check = les.isTimeUsed(t);
+        }
+
+        return check;
     }
 
     public void fillRoomTable(){

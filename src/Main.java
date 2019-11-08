@@ -5,10 +5,7 @@ import com.pengrad.telegrambot.request.GetUpdates;
 import com.pengrad.telegrambot.request.SendChatAction;
 import com.pengrad.telegrambot.request.SendMessage;
 
-import java.time.DayOfWeek;
-import java.time.format.TextStyle;
 import java.util.List;
-import java.util.Locale;
 
 public class Main {
 
